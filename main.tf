@@ -1,6 +1,5 @@
 # Configure the Azure provider
 provider "azurerm" {
-  version = "=2.46.1"
   features {}
 }
 
