@@ -33,7 +33,7 @@ resource "azurerm_kubernetes_cluster" "demo" {
     max_count           = 10
     min_count           = 3
     node_count          = 3
-    availability_zones  = [1,2,3]
+    availability_zones  = [1, 2, 3]
     vnet_subnet_id      = var.subnet_id
     max_pods            = 30
   }
@@ -67,5 +67,81 @@ resource "azurerm_kubernetes_cluster" "demo" {
     azure_policy {
       enabled = true
     }
+    kube_dashboard {
+      enabled = false
+    }
   }
+}
+
+# Bootstrap Flux v2
+# Note: mamaged GitOps for AKS as addon is in preview - plan to switch when available via Terraform
+data "flux_install" "main" {
+  target_path    = "cluster-baseline"
+  network_policy = false
+  version        = "latest"
+}
+
+data "flux_sync" "main" {
+  target_path = data.flux_install.main.target_path
+  url         = "https://github.com/tkubica12/iac-gitops.git"
+  branch      = "master"
+}
+
+# Create flux-system namespace
+resource "kubernetes_namespace" "flux_system" {
+  metadata {
+    name = "flux-system"
+  }
+
+  lifecycle {
+    ignore_changes = [
+      metadata[0].labels,
+    ]
+  }
+
+  depends_on = [azurerm_kubernetes_cluster.demo]
+}
+
+# Split multi-doc YAML with
+# https://registry.terraform.io/providers/gavinbunney/kubectl/latest
+data "kubectl_file_documents" "apply" {
+  content = data.flux_install.main.content
+}
+
+# Convert documents list to include parsed yaml data
+locals {
+  apply = [ for v in data.kubectl_file_documents.apply.documents : {
+      data: yamldecode(v)
+      content: v
+    }
+  ]
+}
+
+# Apply manifests on the cluster
+resource "kubectl_manifest" "apply" {
+  for_each   = { for v in local.apply : lower(join("/", compact([v.data.apiVersion, v.data.kind, lookup(v.data.metadata, "namespace", ""), v.data.metadata.name]))) => v.content }
+  depends_on = [kubernetes_namespace.flux_system]
+  yaml_body = each.value
+}
+
+# Split multi-doc YAML with
+# https://registry.terraform.io/providers/gavinbunney/kubectl/latest
+data "kubectl_file_documents" "sync" {
+  content = data.flux_sync.main.content
+}
+
+# Convert documents list to include parsed yaml data
+locals {
+  sync = [ for v in data.kubectl_file_documents.sync.documents : {
+      data: yamldecode(v)
+      content: v
+    }
+  ]
+}
+
+# Apply manifests on the cluster
+resource "kubectl_manifest" "sync" {
+  for_each   = { for v in local.sync : lower(join("/", compact([v.data.apiVersion, v.data.kind, lookup(v.data.metadata, "namespace", ""), v.data.metadata.name]))) => v.content }
+  depends_on = [kubernetes_namespace.flux_system]
+  yaml_body = each.value
 }

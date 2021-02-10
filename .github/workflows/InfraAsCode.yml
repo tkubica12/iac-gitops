@@ -4,6 +4,8 @@ on:
   push:
     branches:
     - master
+    paths-ignore:
+    - 'cluster-baseline/**'
   pull_request:
   workflow_dispatch:
 
@@ -79,7 +81,7 @@ jobs:
       if: steps.plan.outcome == 'failure'
       run: exit 1
 
-     # On push to master or manual action run apply
+    # On push to master or manual action run apply
     - name: Terraform Apply
       env:
         ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
