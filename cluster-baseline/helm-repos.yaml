@@ -6,3 +6,12 @@ metadata:
 spec:
   interval: 1m
   url: https://kubernetes.github.io/ingress-nginx
+---
+apiVersion: source.toolkit.fluxcd.io/v1beta1
+kind: HelmRepository
+metadata:
+  name: keda
+  namespace: tools
+spec:
+  interval: 1m
+  url: https://kedacore.github.io/charts
