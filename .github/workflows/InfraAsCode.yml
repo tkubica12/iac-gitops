@@ -90,5 +90,7 @@ jobs:
         ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
         ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
         ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}
+        TF_VAR_GIT_PRIVATE_KEY: ${{ secrets.GIT_PRIVATE_KEY }}
+        TF_VAR_GIT_PUBLIC_KEY: ${{ secrets.GIT_PUBLIC_KEY }}
       if: github.ref == 'refs/heads/master' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
       run: terraform apply -auto-approve
