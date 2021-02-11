@@ -83,7 +83,7 @@ data "flux_install" "main" {
 
 data "flux_sync" "main" {
   target_path = data.flux_install.main.target_path
-  url         = "https://github.com/tkubica12/iac-gitops.git"
+  url         = "ssh://git@github.com/tkubica12/iac-gitops.git"
   branch      = "master"
 }
 
@@ -100,6 +100,21 @@ resource "kubernetes_namespace" "flux_system" {
   }
 
   depends_on = [azurerm_kubernetes_cluster.demo]
+}
+
+resource "kubernetes_secret" "main" {
+  depends_on = [kubectl_manifest.apply]
+
+  metadata {
+    name      = data.flux_sync.main.name
+    namespace = data.flux_sync.main.namespace
+  }
+
+  data = {
+    identity       = base64decode(var.GIT_PRIVATE_KEY)
+    "identity.pub" = base64decode(var.GIT_PUBLIC_KEY)
+    known_hosts    = "github.com ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAq2A7hRGmdnm9tUDbO9IDSwBK6TbQa+PXYPCPy6rbTrTtw7PHkccKrpp0yVhp5HdEIcKr6pLlVDBfOLX9QUsyCOV0wzfjIJNlGEYsdlLJizHhbn2mUjvSAHQqZETYP81eFzLQNnPHt4EVVUh7VfDESU84KezmD5QlWpXLmvU31/yMf+Se8xhHTvKSCZIFImWwoG6mbUoWf9nzpIoaSjB+weqqUUmpaaasXVal72J+UX2B+2RPW3RcT0eOzQgqlJL3RKrTJvdsjE3JEAvGq3lGHSZXy28G3skua2SmVi/w4yCE6gbODqnTWlg7+wC604ydGXA8VJiS5ap43JXiUFFAaQ=="
+  }
 }
 
 # Split multi-doc YAML with

@@ -27,3 +27,6 @@ terraform {
     key                  = "terraform.tfstate"
   }
 }
+
+variable "GIT_PRIVATE_KEY" {}
+variable "GIT_PUBLIC_KEY" {}
