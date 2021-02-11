@@ -103,7 +103,7 @@ resource "kubernetes_namespace" "flux_system" {
 }
 
 resource "kubernetes_secret" "main" {
-  depends_on = [kubectl_manifest.apply]
+  depends_on = [kubectl_manifest.apply, azurerm_kubernetes_cluster.demo]
 
   metadata {
     name      = data.flux_sync.main.name
@@ -135,7 +135,7 @@ locals {
 # Apply manifests on the cluster
 resource "kubectl_manifest" "apply" {
   for_each   = { for v in local.apply : lower(join("/", compact([v.data.apiVersion, v.data.kind, lookup(v.data.metadata, "namespace", ""), v.data.metadata.name]))) => v.content }
-  depends_on = [kubernetes_namespace.flux_system]
+  depends_on = [kubernetes_namespace.flux_system, azurerm_kubernetes_cluster.demo]
   yaml_body = each.value
 }
 
@@ -157,6 +157,6 @@ locals {
 # Apply manifests on the cluster
 resource "kubectl_manifest" "sync" {
   for_each   = { for v in local.sync : lower(join("/", compact([v.data.apiVersion, v.data.kind, lookup(v.data.metadata, "namespace", ""), v.data.metadata.name]))) => v.content }
-  depends_on = [kubernetes_namespace.flux_system]
+  depends_on = [kubernetes_namespace.flux_system, azurerm_kubernetes_cluster.demo]
   yaml_body = each.value
 }
