@@ -4,7 +4,7 @@ metadata:
   name: demoweb
   namespace: flux-system
 spec:
-  chart: demoweb
+  chart: ./helm/demoweb
   sourceRef:
     name: apps
     kind: GitRepository
