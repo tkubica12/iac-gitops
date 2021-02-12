@@ -1,0 +1,11 @@
+apiVersion: source.toolkit.fluxcd.io/v1beta1
+kind: HelmChart
+metadata:
+  name: demoweb
+  namespace: flux-system
+spec:
+  chart: ./helm/demoweb
+  sourceRef:
+    name: apps
+    kind: GitRepository
+  interval: 10m
