@@ -8,7 +8,7 @@ spec:
   interval: 5m
   chart:
     spec:
-      chart: demoweb
+      chart: ./helm/demoweb
       sourceRef:
         kind: GitRepository
         name: apps

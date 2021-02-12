@@ -2,6 +2,8 @@ kind: Service
 apiVersion: v1
 metadata:
   name: myweb-service-ext-public
+  annotations:
+    service.beta.kubernetes.io/azure-dns-label-name: {{ .Values.info }}
 spec:
   selector:
     app: myweb
