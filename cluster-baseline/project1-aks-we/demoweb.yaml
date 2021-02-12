@@ -3,7 +3,7 @@ apiVersion: helm.toolkit.fluxcd.io/v2beta1
 kind: HelmRelease
 metadata:
   name: demoweb
-  namespace: tools
+  namespace: default
 spec:
   interval: 5m
   chart:
@@ -11,7 +11,7 @@ spec:
       chart: demoweb
       sourceRef:
         kind: GitRepository
-        name: demoweb
+        name: apps
         namespace: flux-system
       interval: 1m
   values:
