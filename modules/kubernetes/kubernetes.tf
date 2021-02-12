@@ -85,12 +85,14 @@ data "flux_sync" "common" {
   target_path = "cluster-baseline/common"
   url         = "ssh://git@github.com/tkubica12/iac-gitops.git"
   branch      = "master"
+  name        = "common"
 }
 
 data "flux_sync" "app" {
   target_path = "cluster-baseline/${var.name}"
   url         = "ssh://git@github.com/tkubica12/iac-gitops.git"
   branch      = "master"
+  name        = "app"
 }
 
 # Create flux-system namespace
@@ -131,9 +133,9 @@ data "kubectl_file_documents" "apply" {
 
 # Convert documents list to include parsed yaml data
 locals {
-  apply = [ for v in data.kubectl_file_documents.apply.documents : {
-      data: yamldecode(v)
-      content: v
+  apply = [for v in data.kubectl_file_documents.apply.documents : {
+    data : yamldecode(v)
+    content : v
     }
   ]
 }
@@ -142,7 +144,7 @@ locals {
 resource "kubectl_manifest" "apply" {
   for_each   = { for v in local.apply : lower(join("/", compact([v.data.apiVersion, v.data.kind, lookup(v.data.metadata, "namespace", ""), v.data.metadata.name]))) => v.content }
   depends_on = [kubernetes_namespace.flux_system, azurerm_kubernetes_cluster.demo]
-  yaml_body = each.value
+  yaml_body  = each.value
 }
 
 # Split multi-doc YAML with
@@ -157,17 +159,17 @@ data "kubectl_file_documents" "sync-app" {
 
 # Convert documents list to include parsed yaml data
 locals {
-  sync-common = [ for v in data.kubectl_file_documents.sync-common.documents : {
-      data: yamldecode(v)
-      content: v
+  sync-common = [for v in data.kubectl_file_documents.sync-common.documents : {
+    data : yamldecode(v)
+    content : v
     }
   ]
 }
 
 locals {
-  sync-app = [ for v in data.kubectl_file_documents.sync-app.documents : {
-      data: yamldecode(v)
-      content: v
+  sync-app = [for v in data.kubectl_file_documents.sync-app.documents : {
+    data : yamldecode(v)
+    content : v
     }
   ]
 }
@@ -176,11 +178,11 @@ locals {
 resource "kubectl_manifest" "sync-common" {
   for_each   = { for v in local.sync-common : lower(join("/", compact([v.data.apiVersion, v.data.kind, lookup(v.data.metadata, "namespace", ""), v.data.metadata.name]))) => v.content }
   depends_on = [kubernetes_namespace.flux_system, azurerm_kubernetes_cluster.demo, kubectl_manifest.apply]
-  yaml_body = each.value
+  yaml_body  = each.value
 }
 
 resource "kubectl_manifest" "sync-app" {
   for_each   = { for v in local.sync-app : lower(join("/", compact([v.data.apiVersion, v.data.kind, lookup(v.data.metadata, "namespace", ""), v.data.metadata.name]))) => v.content }
   depends_on = [kubernetes_namespace.flux_system, azurerm_kubernetes_cluster.demo, kubectl_manifest.apply]
-  yaml_body = each.value
+  yaml_body  = each.value
 }
