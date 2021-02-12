@@ -175,12 +175,12 @@ locals {
 # Apply manifests on the cluster
 resource "kubectl_manifest" "sync-common" {
   for_each   = { for v in local.sync-common : lower(join("/", compact([v.data.apiVersion, v.data.kind, lookup(v.data.metadata, "namespace", ""), v.data.metadata.name]))) => v.content }
-  depends_on = [kubernetes_namespace.flux_system, azurerm_kubernetes_cluster.demo]
+  depends_on = [kubernetes_namespace.flux_system, azurerm_kubernetes_cluster.demo, kubectl_manifest.apply]
   yaml_body = each.value
 }
 
 resource "kubectl_manifest" "sync-app" {
   for_each   = { for v in local.sync-app : lower(join("/", compact([v.data.apiVersion, v.data.kind, lookup(v.data.metadata, "namespace", ""), v.data.metadata.name]))) => v.content }
-  depends_on = [kubernetes_namespace.flux_system, azurerm_kubernetes_cluster.demo]
+  depends_on = [kubernetes_namespace.flux_system, azurerm_kubernetes_cluster.demo, kubectl_manifest.apply]
   yaml_body = each.value
 }
