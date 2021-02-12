@@ -1,5 +1,5 @@
 resource "azurerm_resource_group" "project1" {
-  name     = "project1-rg"
+  name     = "project1-we-rg"
   location = "westeurope"
 }
 
