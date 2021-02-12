@@ -1,6 +1,6 @@
 resource "azurerm_resource_group" "project1-ne" {
   name     = "project1-ne-rg"
-  location = "norteurope"
+  location = "northeurope"
 }
 
 module "kubernetes-project1-ne" {
