@@ -81,8 +81,14 @@ data "flux_install" "main" {
   version        = "latest"
 }
 
-data "flux_sync" "main" {
-  target_path = data.flux_install.main.target_path
+data "flux_sync" "common" {
+  target_path = "cluster-baseline/common"
+  url         = "ssh://git@github.com/tkubica12/iac-gitops.git"
+  branch      = "master"
+}
+
+data "flux_sync" "app" {
+  target_path = "cluster-baseline/${var.name}"
   url         = "ssh://git@github.com/tkubica12/iac-gitops.git"
   branch      = "master"
 }
@@ -102,12 +108,27 @@ resource "kubernetes_namespace" "flux_system" {
   depends_on = [azurerm_kubernetes_cluster.demo]
 }
 
-resource "kubernetes_secret" "main" {
+resource "kubernetes_secret" "common" {
   depends_on = [kubectl_manifest.apply, azurerm_kubernetes_cluster.demo]
 
   metadata {
-    name      = data.flux_sync.main.name
-    namespace = data.flux_sync.main.namespace
+    name      = data.flux_sync.common.name
+    namespace = data.flux_sync.common.namespace
+  }
+
+  data = {
+    identity       = base64decode(var.GIT_PRIVATE_KEY)
+    "identity.pub" = base64decode(var.GIT_PUBLIC_KEY)
+    known_hosts    = "github.com ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAq2A7hRGmdnm9tUDbO9IDSwBK6TbQa+PXYPCPy6rbTrTtw7PHkccKrpp0yVhp5HdEIcKr6pLlVDBfOLX9QUsyCOV0wzfjIJNlGEYsdlLJizHhbn2mUjvSAHQqZETYP81eFzLQNnPHt4EVVUh7VfDESU84KezmD5QlWpXLmvU31/yMf+Se8xhHTvKSCZIFImWwoG6mbUoWf9nzpIoaSjB+weqqUUmpaaasXVal72J+UX2B+2RPW3RcT0eOzQgqlJL3RKrTJvdsjE3JEAvGq3lGHSZXy28G3skua2SmVi/w4yCE6gbODqnTWlg7+wC604ydGXA8VJiS5ap43JXiUFFAaQ=="
+  }
+}
+
+resource "kubernetes_secret" "app" {
+  depends_on = [kubectl_manifest.apply, azurerm_kubernetes_cluster.demo]
+
+  metadata {
+    name      = data.flux_sync.app.name
+    namespace = data.flux_sync.app.namespace
   }
 
   data = {
@@ -141,13 +162,25 @@ resource "kubectl_manifest" "apply" {
 
 # Split multi-doc YAML with
 # https://registry.terraform.io/providers/gavinbunney/kubectl/latest
-data "kubectl_file_documents" "sync" {
-  content = data.flux_sync.main.content
+data "kubectl_file_documents" "sync-common" {
+  content = data.flux_sync.common.content
+}
+
+data "kubectl_file_documents" "sync-app" {
+  content = data.flux_sync.app.content
 }
 
 # Convert documents list to include parsed yaml data
 locals {
-  sync = [ for v in data.kubectl_file_documents.sync.documents : {
+  sync-common = [ for v in data.kubectl_file_documents.sync-common.documents : {
+      data: yamldecode(v)
+      content: v
+    }
+  ]
+}
+
+locals {
+  sync-app = [ for v in data.kubectl_file_documents.sync-app.documents : {
       data: yamldecode(v)
       content: v
     }
@@ -155,8 +188,14 @@ locals {
 }
 
 # Apply manifests on the cluster
-resource "kubectl_manifest" "sync" {
-  for_each   = { for v in local.sync : lower(join("/", compact([v.data.apiVersion, v.data.kind, lookup(v.data.metadata, "namespace", ""), v.data.metadata.name]))) => v.content }
+resource "kubectl_manifest" "sync-common" {
+  for_each   = { for v in local.sync-common : lower(join("/", compact([v.data.apiVersion, v.data.kind, lookup(v.data.metadata, "namespace", ""), v.data.metadata.name]))) => v.content }
+  depends_on = [kubernetes_namespace.flux_system, azurerm_kubernetes_cluster.demo]
+  yaml_body = each.value
+}
+
+resource "kubectl_manifest" "sync-app" {
+  for_each   = { for v in local.sync-app : lower(join("/", compact([v.data.apiVersion, v.data.kind, lookup(v.data.metadata, "namespace", ""), v.data.metadata.name]))) => v.content }
   depends_on = [kubernetes_namespace.flux_system, azurerm_kubernetes_cluster.demo]
   yaml_body = each.value
 }
