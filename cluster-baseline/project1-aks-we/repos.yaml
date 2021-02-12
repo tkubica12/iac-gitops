@@ -14,4 +14,4 @@ spec:
     # include charts directory
     !/helm/
   secretRef:
-    name: apps
+    name: app
